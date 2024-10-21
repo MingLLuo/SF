@@ -1192,8 +1192,19 @@ Qed.
 Theorem eqb_sym : forall (n m : nat),
   (n =? m) = (m =? n).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intro n.
+  induction n.
+  - intros.
+    destruct m.
+    + reflexivity.
+    + reflexivity. 
+  - intros.
+    simpl.
+    destruct m.
+    + reflexivity.
+    + simpl. rewrite IHn. 
+      reflexivity.
+Qed.  
 
 (** **** Exercise: 3 stars, advanced, optional (eqb_sym_informal)
 
@@ -1213,8 +1224,15 @@ Theorem eqb_trans : forall n m p,
   m =? p = true ->
   n =? p = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  induction n.
+  - destruct m, p. reflexivity. discriminate. discriminate. discriminate.
+  - destruct m, p.
+    + discriminate.
+    + discriminate.
+    + discriminate.
+    + simpl. apply IHn.
+Qed.
+
 
 (** **** Exercise: 3 stars, advanced (split_combine)
 
@@ -1226,15 +1244,26 @@ Proof.
     Hint: Take a look at the definition of [combine] in [Poly].
     Your property will need to account for the behavior of [combine]
     in its base cases, which possibly drop some list elements. *)
-
-Definition split_combine_statement : Prop
-  (* ("[: Prop]" means that we are giving a name to a
-     logical proposition here.) *)
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+  
+Definition split_combine_statement : Prop :=
+  forall (A B : Type) (l1 : list A) (l2 : list B),
+    length l1 = length l2 ->
+    split (combine l1 l2) = (l1, l2).
 
 Theorem split_combine : split_combine_statement.
 Proof.
-(* FILL IN HERE *) Admitted.
+  intros A B l1 l2 Hlen.
+  generalize dependent l2.
+  induction l1 as [| x1 t1 IH]; intros l2 Hlen.
+  - destruct l2 as [| x2 t2].
+    + reflexivity.
+    + simpl in Hlen. inversion Hlen.
+  - destruct l2 as [| x2 t2].
+    + simpl in Hlen. inversion Hlen.
+    + simpl. rewrite (IH t2).
+      * reflexivity.
+      * simpl in Hlen. inversion Hlen. reflexivity.
+Qed.
 
 (* Do not modify the following line: *)
 Definition manual_grade_for_split_combine : option (nat*string) := None.
@@ -1246,8 +1275,20 @@ Theorem filter_exercise : forall (X : Type) (test : X -> bool)
   filter test l = x :: lf ->
   test x = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros.
+  induction l as [| h t IH].
+  - simpl in H.
+    discriminate.
+  - simpl in H. 
+    destruct (test h) eqn:Htest.
+    + inversion H. 
+      rewrite <- H1.
+      rewrite Htest.
+      reflexivity. 
+    + apply IH in H.
+      apply H.
+Qed.
+
 
 (** **** Exercise: 4 stars, advanced, especially useful (forall_exists_challenge)
 
@@ -1275,42 +1316,56 @@ Proof.
     [existsb'] and [existsb] have the same behavior.
 *)
 
-Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint forallb {X : Type} (test : X -> bool) (l : list X) : bool :=
+  match l with
+  | [] => true
+  | x :: xs => (test x) && (forallb test xs)
+  end.
 
 Example test_forallb_1 : forallb odd [1;3;5;7;9] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_forallb_2 : forallb negb [false;false] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_forallb_3 : forallb even [0;2;4;5] = false.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_forallb_4 : forallb (eqb 5) [] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
-Fixpoint existsb {X : Type} (test : X -> bool) (l : list X) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Fixpoint existsb {X : Type} (test : X -> bool) (l : list X) : bool :=
+  match l with
+  | [] => false
+  | x :: xs => (test x) || (existsb test xs)
+  end.
 
 Example test_existsb_1 : existsb (eqb 5) [0;2;3;6] = false.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_existsb_2 : existsb (andb true) [true;true;false] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_existsb_3 : existsb odd [1;0;0;0;0;3] = true.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
 Example test_existsb_4 : existsb even [] = false.
-Proof. (* FILL IN HERE *) Admitted.
+Proof. reflexivity. Qed.
 
-Definition existsb' {X : Type} (test : X -> bool) (l : list X) : bool
-  (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+Definition existsb' {X : Type} (test : X -> bool) (l : list X) : bool :=
+  negb (forallb (fun x => negb (test x)) l).
 
 Theorem existsb_existsb' : forall (X : Type) (test : X -> bool) (l : list X),
   existsb test l = existsb' test l.
-Proof. (* FILL IN HERE *) Admitted.
+Proof.
+  intros X test l.
+  induction l as [| x xs IH].
+  - reflexivity.
+  -  simpl. unfold existsb'.
+    simpl. destruct (test x) eqn: Htest.
+    + reflexivity.
+    + simpl. apply IH.
+Qed.
 
 (** [] *)
 
